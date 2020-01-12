@@ -168,7 +168,35 @@ Note this filter takes a regular expression. By default, all views are built.
 
 ## Deployment
 
-Once you build, serve, and verify your labs, you're on your own for publishing the artifacts. There are many ways to publish a static web site and we won't try to cover them all, however, we have included support for deploying your landing pages and codelabs to Google Cloud Storage (GCS).
+Once you build, serve, and verify your labs, you're on your own for publishing the artifacts.
+
+This document describes two methods: Firebase Hosting and Google Cloud Storage.
+
+### Firebase Hosting
+
+This is the preferred method and is very simple to set up.
+
+First, ensure you have the firebase CLI installed globally:
+
+```
+npm i -g firebase-tools
+```
+
+Second, login to the firebase CLI:
+
+```
+firebase login
+```
+
+Then either generate a new firebase configuration by running `firebase init hosting` inside this folder or copy the sample files provided and modify them to fit.
+
+You may then deploy by running:
+
+```
+firebase deploy --only hosting:SITE_NAME
+```
+
+Where `SITE_NAME` is the value of `site` under `hosting` in `firebase.json`, if any.
 
 ### Setup for GCS Support
 

@@ -17,3 +17,8 @@ app/js/bundle
 
 /build/
 /dist/
+
+.firebaserc
+firebase.json
+firebase-debug.log
+.firebase/
