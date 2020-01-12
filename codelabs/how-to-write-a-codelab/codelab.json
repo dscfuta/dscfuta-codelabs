@@ -1,0 +1,23 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2020-01-12T02:06:26+01:00",
+  "id": "how-to-write-a-codelab",
+  "duration": 7,
+  "title": "How to Write a Codelab",
+  "authors": "Victor Akinyemi",
+  "summary": "How to Write a Codelab",
+  "source": "how-to-write-a-codelab.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "sample"
+  ],
+  "tags": [],
+  "feedback": "https://dscfuta.com",
+  "url": "how-to-write-a-codelab"
+}

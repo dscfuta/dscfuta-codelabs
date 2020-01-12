@@ -1,0 +1,7 @@
+{
+  "title": "FSI Sandbox",
+  "description": "How to use the FSI Sandbox",
+  "logoUrl": "/fsi-sandbox/logo.jpg",
+  "tags": ["fsi-sandbox"],
+  "exclude": [".*-about$", "^lang-.*"]
+}
