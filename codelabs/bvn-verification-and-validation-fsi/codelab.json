@@ -1,0 +1,25 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2020-01-12T02:03:35+01:00",
+  "id": "bvn-verification-and-validation-fsi",
+  "duration": 1,
+  "title": "Performing BVN Verification and Validation using the DSC wrapper around the NIBSS FSI Sandbox",
+  "authors": "Victor Akinyemi",
+  "summary": "Performing BVN Verification and Validation using the DSC wrapper around the NIBSS FSI Sandbox",
+  "source": "bvn-verification-and-validation-fsi.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "web"
+  ],
+  "tags": [
+    "fsi-sandbox"
+  ],
+  "feedback": "https://dscfuta.com",
+  "url": "bvn-verification-and-validation-fsi"
+}
