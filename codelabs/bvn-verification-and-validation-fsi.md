@@ -74,30 +74,32 @@ All categories of requests on the API (/bvnr for BVN verification, /BVNPlaceHold
 
 This `/Reset` route is used to generate the encryption keys which are then used henceforth for all requests to any other route in that category. The process is as follows:
 
-- Make a request to /Reset with the following headers:
+* Make a request to /Reset with the following headers:
   - `OrganisationCode`: Your organisation code (`11111` in the case of the FSI Sandbox), in base64 encoded format.
   - `Sandbox-Key`: Your sandbox key, which can be gotten from your profile on the [FSI Sandbox](http://sandbox.fsi.ng).
-- If the details are correct, a response with status 200 OK is returned with the following extra headers
+* If the details are correct, a response with status 200 OK is returned with the following extra headers
   - `name`: The name of the organisation
   - `ivkey`: One of the pair of keys used in the encryption process
   - `aes_key`: One of the pair of keys used in the encryption process
   - `password`: This password will be used when generating some of the required headers
   - `email`: The email associated with the organisation
   - `code`: The organisation code
-- We generate the required headers using the above details:
+* We generate the required headers using the above details:
   - `OrganisationCode`: Same as before
   - `Sandbox-Key`: Same as before
   - `SIGNATURE`: This is a SHA256 hashed string that consists of the organisation code, concatenated with today's date in YYYYMMDD format, then concatenated with the password. Basically:
+
     ```javascript
     const SIGNATURE = hash(code + "20200101" + password);
     ```
+
   - `SIGNATURE_METH`: The method with which the `SIGNATURE` header was generated, `SHA256` is the only supported method at the moment;
   - `Authorization`: A base64 encoded string consisting of the `code` and `password` separated by a colon. That is, `${code}:${password}`.
   - `Content-Type`: This will be `application/json`, since we are sending JSON. The API also supports requests in XML format, but that is out of the scope of this codelab.
   - `Accept`: This will also be `application/json` as we require a JSON response from the server.
-- We create a cipher and decipher using the AES key and IV key provided to us, and use those to decrypt and encrypt futher requests.
+  - We create a cipher and decipher using the AES key and IV key provided to us, and use those to decrypt and encrypt futher requests.
 
-Below is a code sample illustrating the above:
+### Code sample
 
 ```javascript
 const crypto = require("crypto");
@@ -146,6 +148,8 @@ const getTodaysDate = () =>
     .slice(0, 10)
     .replace(/-/g, "");
 
+const API_URL = "https://sandboxapi.fsi.ng/nibss";
+
 function performReset(type = "bvnr") {
   return new Promise((resolve, reject) => {
     fetch(`${API_URL}/${type}/Reset`, {
@@ -183,7 +187,7 @@ function performReset(type = "bvnr") {
             };
             return headers;
           };
-          // Create functions for encrypting and recruiting using those details
+          // Create functions for encrypting and decrypting using those details
           const encryptBody = aesEncrypt(details.aesKey, details.ivKey);
           const decryptBody = aesDecrypt(details.aesKey, details.ivKey);
           const credentials = {
