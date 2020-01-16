@@ -38,15 +38,16 @@ $ mkdir fsi-codelab && cd fsi-codelab
 ```
 
 Then initialize an npm project in the directory. We're accepting all default options here since they don't really matter.
-We also install some dependencies, including `nodemon` to automatically restart the project when we make changes to our code, and `node-fetch`, an implementation of the `fetch` API for Node.
+We also install some dependencies, including `nodemon` to automatically restart the project when we make changes to our code, and `node-fetch`, an implementation of the `fetch` API for Node, and `dot-env` for reading environment variables from `.env` files.
 
 ```
-$ npm init -y && npm install --save express node-fetch && npm install --save-dev nodemon
+$ npm init -y && npm install --save express node-fetch dot-env && npm install --save-dev nodemon
 ```
 
 Create a file called `index.js` and type (or copy-paste) the following inside:
 
 ```javascript
+require("dot-env").config();
 const app = require("express")();
 
 app.get("/", function(req, res) {
@@ -57,6 +58,16 @@ app.listen(3000, function() {
   console.log(`App listening on *:3000`);
 });
 ```
+
+Then create a file named `.env` with the following content:
+```
+API_URL=https://sandboxapi.fsi.ng/nibss
+ORGANISATION_CODE=11111
+SANDBOX_KEY=[your FSI Sandbox key which can be found on your profile]
+```
+
+Positive
+: **N/B**: As a good rule of thumb, make sure to add this file to your .gitignore. Environment variables should *never* be checked in to a Git repo.
 
 Then run `npx nodemon`, which will start our program and automatically restart it when we make any changes.
 
@@ -74,34 +85,31 @@ All categories of requests on the API (/bvnr for BVN verification, /BVNPlaceHold
 
 This `/Reset` route is used to generate the encryption keys which are then used henceforth for all requests to any other route in that category. The process is as follows:
 
-* Make a request to /Reset with the following headers:
+1. Make a request to /Reset with the following headers:
   - `OrganisationCode`: Your organisation code (`11111` in the case of the FSI Sandbox), in base64 encoded format.
   - `Sandbox-Key`: Your sandbox key, which can be gotten from your profile on the [FSI Sandbox](http://sandbox.fsi.ng).
-* If the details are correct, a response with status 200 OK is returned with the following extra headers
+2. If the details are correct, a response with status 200 OK is returned with the following extra headers
   - `name`: The name of the organisation
   - `ivkey`: One of the pair of keys used in the encryption process
   - `aes_key`: One of the pair of keys used in the encryption process
   - `password`: This password will be used when generating some of the required headers
   - `email`: The email associated with the organisation
   - `code`: The organisation code
-* We generate the required headers using the above details:
-  - `OrganisationCode`: Same as before
-  - `Sandbox-Key`: Same as before
-  - `SIGNATURE`: This is a SHA256 hashed string that consists of the organisation code, concatenated with today's date in YYYYMMDD format, then concatenated with the password. Basically:
-
-    ```javascript
-    const SIGNATURE = hash(code + "20200101" + password);
-    ```
-
-  - `SIGNATURE_METH`: The method with which the `SIGNATURE` header was generated, `SHA256` is the only supported method at the moment;
+3. We generate the required headers using the above details:
+  - `OrganisationCode`: Same as before.
+  - `Sandbox-Key`: Same as before.
+  - `SIGNATURE`: This is a SHA256 hashed string that consists of the organisation code, concatenated with today's date in YYYYMMDD format, then concatenated with the password. Basically: `const SIGNATURE = hash(code + "20200101" + password);`
+  - `SIGNATURE_METH`: The method with which the `SIGNATURE` header was generated, `SHA256` is the only supported method at the moment.
   - `Authorization`: A base64 encoded string consisting of the `code` and `password` separated by a colon. That is, `${code}:${password}`.
   - `Content-Type`: This will be `application/json`, since we are sending JSON. The API also supports requests in XML format, but that is out of the scope of this codelab.
   - `Accept`: This will also be `application/json` as we require a JSON response from the server.
   - We create a cipher and decipher using the AES key and IV key provided to us, and use those to decrypt and encrypt futher requests.
 
+
 ### Code sample
 
 ```javascript
+// Store this as performReset.js
 const crypto = require("crypto");
 
 // Converts a given string to the base64 format
@@ -148,9 +156,14 @@ const getTodaysDate = () =>
     .slice(0, 10)
     .replace(/-/g, "");
 
-const API_URL = "https://sandboxapi.fsi.ng/nibss";
+// Pass these in as environment variables in your .env file
+const API_URL = process.env.NODE_ENV;
+const organisationCode = process.env.ORGANISATION_CODE;
+const sandboxKey = process.env.sandboxKey;
 
-function performReset(type = "bvnr") {
+// type is one of bvnr, BVNPlaceHolder, or fp
+// as defined in the documentation
+export function performReset(type = "bvnr") {
   return new Promise((resolve, reject) => {
     fetch(`${API_URL}/${type}/Reset`, {
       method: "POST",
@@ -161,6 +174,7 @@ function performReset(type = "bvnr") {
       }
     })
       .then(res => {
+        // If we have a successful request
         if (res.status === 200) {
           const header = name => res.headers.get(name);
           const details = {
@@ -172,7 +186,7 @@ function performReset(type = "bvnr") {
             code: header("code"),
             name: header("name")
           };
-          // Use the data gotten to get a lot of views
+          // Use the data returned to generate our headers
           const getRequestHeaders = () => {
             const headers = {
               OrganisationCode: toBase64(organisationCode),
@@ -208,4 +222,50 @@ function performReset(type = "bvnr") {
       });
   });
 }
+```
+
+This reset must be called once for every category before any other request is made. One way to ensure this is to make a request to all the reset endpoints and store the results to be used across the app before calling `app.listen`, or to use a middleware to call the endpoint if required and inject the results in to the `Request` object. We will be taking the latter approach in this codelab.
+
+
+### Pre-request preparations
+
+As discussed in the last section, we will be using a middleware to perform a reset if required before all our requests, store the result, and inject it into the `Request` object.
+
+Create a file called resetMiddleware.js with the following contents:
+```javascript
+const { performReset } = require('./performReset.js');
+
+// We'll store any already peformed resets in here to check for later
+const _resetCache = {
+  bvnr: null,
+  BVNPlaceHolder: null,
+  fp: null
+}
+
+// This function creates a middleware that performs a reset of a particular type
+// when required
+export function resetIfNeeded(type = "bvnr") {
+  return function reset(req, res, next) {
+    // Have we performed a reset already for this endpoint family?
+    // If so, used the cached values
+    if (_resetCache[type] != null) {
+      req.apiCredentials = _resetCache[type];
+      next();
+    }
+    // Otherwise perform a reset request and cache that
+    else {
+      performReset(type).then(cred => {
+        _resetCache[type] = cred;
+        req.apiCredentials = _resetCache[type];
+        next();
+      }).catch(next);
+    }
+  }
+}
+```
+
+Now we can simply define a route like so, and access `req.apiCredentials` in the route handler:
+
+```javascript
+app.get('/verifyBVN', resetIfNeeded("bvnr"), ...);
 ```

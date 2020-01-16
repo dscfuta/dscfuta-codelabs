@@ -47,11 +47,12 @@
 <p>Create a folder for this project and cd into it:</p>
 <pre><code>$ mkdir fsi-codelab &amp;&amp; cd fsi-codelab
 </code></pre>
-<p>Then initialize an npm project in the directory. We&#39;re accepting all default options here since they don&#39;t really matter. We also install some dependencies, including <code>nodemon</code> to automatically restart the project when we make changes to our code, and <code>node-fetch</code>, an implementation of the <code>fetch</code> API for Node.</p>
-<pre><code>$ npm init -y &amp;&amp; npm install --save express node-fetch &amp;&amp; npm install --save-dev nodemon
+<p>Then initialize an npm project in the directory. We&#39;re accepting all default options here since they don&#39;t really matter. We also install some dependencies, including <code>nodemon</code> to automatically restart the project when we make changes to our code, and <code>node-fetch</code>, an implementation of the <code>fetch</code> API for Node, and <code>dot-env</code> for reading environment variables from <code>.env</code> files.</p>
+<pre><code>$ npm init -y &amp;&amp; npm install --save express node-fetch dot-env &amp;&amp; npm install --save-dev nodemon
 </code></pre>
 <p>Create a file called <code>index.js</code> and type (or copy-paste) the following inside:</p>
-<pre><code>const app = require(&#34;express&#34;)();
+<pre><code>require(&#34;dot-env&#34;).config();
+const app = require(&#34;express&#34;)();
 
 app.get(&#34;/&#34;, function(req, res) {
   res.send(&#34;Hello World!&#34;);
@@ -61,6 +62,13 @@ app.listen(3000, function() {
   console.log(`App listening on *:3000`);
 });
 </code></pre>
+<p>Then create a file named <code>.env</code> with the following content:</p>
+<pre><code>API_URL=https://sandboxapi.fsi.ng/nibss
+ORGANISATION_CODE=11111
+SANDBOX_KEY=[your FSI Sandbox key which can be found on your profile]
+</code></pre>
+<aside class="special"><p><strong>N/B</strong>: As a good rule of thumb, make sure to add this file to your .gitignore. Environment variables should <em>never</em> be checked in to a Git repo.</p>
+</aside>
 <p>Then run <code>npx nodemon</code>, which will start our program and automatically restart it when we make any changes.</p>
 
 
@@ -72,13 +80,13 @@ app.listen(3000, function() {
 <h2 is-upgraded>Communicating with the API - Generating encryption keys</h2>
 <p>All categories of requests on the API (/bvnr for BVN verification, /BVNPlaceHolder for BVN matching, /fp for Fingerprint validation respectively) have an associated <code>/Reset</code> route that doesn&#39;t require an encrypted request body.</p>
 <p>This <code>/Reset</code> route is used to generate the encryption keys which are then used henceforth for all requests to any other route in that category. The process is as follows:</p>
-<ul>
-<li>Make a request to /Reset with the following headers:<ul>
+<ol type="1">
+<li>Make a request to /Reset with the following headers:  <ul>
 <li><code>OrganisationCode</code>: Your organisation code (<code>11111</code> in the case of the FSI Sandbox), in base64 encoded format.</li>
 <li><code>Sandbox-Key</code>: Your sandbox key, which can be gotten from your profile on the <a href="http://sandbox.fsi.ng" target="_blank">FSI Sandbox</a>.</li>
 </ul>
 </li>
-<li>If the details are correct, a response with status 200 OK is returned with the following extra headers<ul>
+<li>If the details are correct, a response with status 200 OK is returned with the following extra headers  <ul>
 <li><code>name</code>: The name of the organisation</li>
 <li><code>ivkey</code>: One of the pair of keys used in the encryption process</li>
 <li><code>aes_key</code>: One of the pair of keys used in the encryption process</li>
@@ -87,123 +95,170 @@ app.listen(3000, function() {
 <li><code>code</code>: The organisation code</li>
 </ul>
 </li>
-<li>We generate the required headers using the above details:<ul>
-<li><code>OrganisationCode</code>: Same as before</li>
-<li><code>Sandbox-Key</code>: Same as before</li>
-<li><code>SIGNATURE</code>: This is a SHA256 hashed string that consists of the organisation code, concatenated with today&#39;s date in YYYYMMDD format, then concatenated with the password. Basically:</li>
-</ul>
-<pre><code>const SIGNATURE = hash(code + &#34;20200101&#34; + password);
-</code></pre>
-<ul>
-<li><code>SIGNATURE_METH</code>: The method with which the <code>SIGNATURE</code> header was generated, <code>SHA256</code> is the only supported method at the moment;</li>
+<li>We generate the required headers using the above details:  <ul>
+<li><code>OrganisationCode</code>: Same as before.</li>
+<li><code>Sandbox-Key</code>: Same as before.</li>
+<li><code>SIGNATURE</code>: This is a SHA256 hashed string that consists of the organisation code, concatenated with today&#39;s date in YYYYMMDD format, then concatenated with the password. Basically: <code>const SIGNATURE = hash(code + &#34;20200101&#34; + password);</code></li>
+<li><code>SIGNATURE_METH</code>: The method with which the <code>SIGNATURE</code> header was generated, <code>SHA256</code> is the only supported method at the moment.</li>
 <li><code>Authorization</code>: A base64 encoded string consisting of the <code>code</code> and <code>password</code> separated by a colon. That is, <code>${code}:${password}</code>.</li>
 <li><code>Content-Type</code>: This will be <code>application/json</code>, since we are sending JSON. The API also supports requests in XML format, but that is out of the scope of this codelab.</li>
 <li><code>Accept</code>: This will also be <code>application/json</code> as we require a JSON response from the server.</li>
-<li>We create a cipher and decipher using the AES key and IV key provided to us, and use those to decrypt and encrypt futher requests.<h2 is-upgraded>Code sample</h2>
-<pre><code>const crypto = require(&#34;crypto&#34;);
+<li>We create a cipher and decipher using the AES key and IV key provided to us, and use those to decrypt and encrypt futher requests.</li>
+</ul>
+</li>
+</ol>
+<h2 is-upgraded>Code sample</h2>
+<pre><code>// Store this as performReset.js
+const crypto = require(&#34;crypto&#34;);
+
 // Converts a given string to the base64 format
 const toBase64 = string =&gt; Buffer.from(string).toString(&#34;base64&#34;);
+
 // Hashes a given string with SHA256
 const sha256 = string =&gt; {
-const hash = crypto.createHash(&#34;sha256&#34;);
-hash.update(string);
-return hash.digest(&#34;hex&#34;);
+  const hash = crypto.createHash(&#34;sha256&#34;);
+  hash.update(string);
+  return hash.digest(&#34;hex&#34;);
 };
+
 // Takes an AES key and IV key and returns a function that
 // encrypts anything it&#39;s given using said keys.
 const aesEncrypt = (aesKey, ivKey) =&gt; text =&gt; {
-const cipher = crypto.createCipheriv(
-&#34;aes-128-cbc&#34;,
-Buffer.from(aesKey),
-ivKey
-);
-let encrypted = cipher.update(text);
-encrypted = Buffer.concat([encrypted, cipher.final()]);
-return encrypted.toString(&#34;hex&#34;);
+  const cipher = crypto.createCipheriv(
+    &#34;aes-128-cbc&#34;,
+    Buffer.from(aesKey),
+    ivKey
+  );
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return encrypted.toString(&#34;hex&#34;);
 };
+
 // Takes an AES key and IV key and returns a function that
 // decrypts anything it&#39;s given using said keys.
 const aesDecrypt = (aesKey, ivKey) =&gt; text =&gt; {
-const encryptedText = Buffer.from(text, &#34;hex&#34;);
-let decipher = crypto.createDecipheriv(
-&#34;aes-128-cbc&#34;,
-Buffer.from(aesKey),
-ivKey
-);
-let decrypted = decipher.update(encryptedText);
-decrypted = Buffer.concat([decrypted, decipher.final()]);
-return decrypted.toString();
+  const encryptedText = Buffer.from(text, &#34;hex&#34;);
+  let decipher = crypto.createDecipheriv(
+    &#34;aes-128-cbc&#34;,
+    Buffer.from(aesKey),
+    ivKey
+  );
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
 };
+
 // Returns the date formatted in a YYYYMMDD mode
 const getTodaysDate = () =&gt;
-new Date()
-.toJSON()
-.slice(0, 10)
-.replace(/-/g, &#34;&#34;);
-const API_URL = &#34;https://sandboxapi.fsi.ng/nibss&#34;;
-function performReset(type = &#34;bvnr&#34;) {
-return new Promise((resolve, reject) =&gt; {
-fetch(`${API_URL}/${type}/Reset`, {
-method: &#34;POST&#34;,
-headers: {
-// Make a request to generate our encryption keys
-OrganisationCode: toBase64(organisationCode),
-&#34;Sandbox-Key&#34;: sandboxKey
-}
-})
-.then(res =&gt; {
-if (res.status === 200) {
-  const header = name =&gt; res.headers.get(name);
-  const details = {
-    name: header(&#34;name&#34;),
-    ivKey: header(&#34;ivkey&#34;),
-    aesKey: header(&#34;aes_key&#34;),
-    password: header(&#34;password&#34;),
-    email: header(&#34;email&#34;),
-    code: header(&#34;code&#34;),
-    name: header(&#34;name&#34;)
-  };
-  // Use the data gotten to get a lot of views
-  const getRequestHeaders = () =&gt; {
-    const headers = {
-      OrganisationCode: toBase64(organisationCode),
-      &#34;Sandbox-Key&#34;: sandboxKey,
-      SIGNATURE: sha256(
-        details.code + getTodaysDate() + details.password
-      ),
-      SIGNATURE_METH: &#34;SHA256&#34;,
-      Authorization: toBase64(`${details.code}:${details.password}`),
-      &#34;Content-Type&#34;: &#34;application/json&#34;,
-      Accept: &#34;application/json&#34;
-    };
-    return headers;
-  };
-  // Create functions for encrypting and decrypting using those details
-  const encryptBody = aesEncrypt(details.aesKey, details.ivKey);
-  const decryptBody = aesDecrypt(details.aesKey, details.ivKey);
-  const credentials = {
-    details,
-    getRequestHeaders,
-    encryptBody,
-    decryptBody
-  };
-  resolve(credentials);
-} else {
-  res.text().then(res =&gt; {
-    reject(res);
+  new Date()
+    .toJSON()
+    .slice(0, 10)
+    .replace(/-/g, &#34;&#34;);
+
+// Pass these in as environment variables in your .env file
+const API_URL = process.env.NODE_ENV;
+const organisationCode = process.env.ORGANISATION_CODE;
+const sandboxKey = process.env.sandboxKey;
+
+// type is one of bvnr, BVNPlaceHolder, or fp
+// as defined in the documentation
+export function performReset(type = &#34;bvnr&#34;) {
+  return new Promise((resolve, reject) =&gt; {
+    fetch(`${API_URL}/${type}/Reset`, {
+      method: &#34;POST&#34;,
+      headers: {
+        // Make a request to generate our encryption keys
+        OrganisationCode: toBase64(organisationCode),
+        &#34;Sandbox-Key&#34;: sandboxKey
+      }
+    })
+      .then(res =&gt; {
+        // If we have a successful request
+        if (res.status === 200) {
+          const header = name =&gt; res.headers.get(name);
+          const details = {
+            name: header(&#34;name&#34;),
+            ivKey: header(&#34;ivkey&#34;),
+            aesKey: header(&#34;aes_key&#34;),
+            password: header(&#34;password&#34;),
+            email: header(&#34;email&#34;),
+            code: header(&#34;code&#34;),
+            name: header(&#34;name&#34;)
+          };
+          // Use the data returned to generate our headers
+          const getRequestHeaders = () =&gt; {
+            const headers = {
+              OrganisationCode: toBase64(organisationCode),
+              &#34;Sandbox-Key&#34;: sandboxKey,
+              SIGNATURE: sha256(
+                details.code + getTodaysDate() + details.password
+              ),
+              SIGNATURE_METH: &#34;SHA256&#34;,
+              Authorization: toBase64(`${details.code}:${details.password}`),
+              &#34;Content-Type&#34;: &#34;application/json&#34;,
+              Accept: &#34;application/json&#34;
+            };
+            return headers;
+          };
+          // Create functions for encrypting and decrypting using those details
+          const encryptBody = aesEncrypt(details.aesKey, details.ivKey);
+          const decryptBody = aesDecrypt(details.aesKey, details.ivKey);
+          const credentials = {
+            details,
+            getRequestHeaders,
+            encryptBody,
+            decryptBody
+          };
+          resolve(credentials);
+        } else {
+          res.text().then(res =&gt; {
+            reject(res);
+          });
+        }
+      })
+      .catch(err =&gt; {
+        reject(err);
+      });
   });
 }
-})
-.catch(err =&gt; {
-reject(err);
-});
-});
+</code></pre>
+<p>This reset must be called once for every category before any other request is made. One way to ensure this is to make a request to all the reset endpoints and store the results to be used across the app before calling <code>app.listen</code>, or to use a middleware to call the endpoint if required and inject the results in to the <code>Request</code> object. We will be taking the latter approach in this codelab.</p>
+<h2 is-upgraded>Pre-request preparations</h2>
+<p>As discussed in the last section, we will be using a middleware to perform a reset if required before all our requests, store the result, and inject it into the <code>Request</code> object.</p>
+<p>Create a file called resetMiddleware.js with the following contents:</p>
+<pre><code>const { performReset } = require(&#39;./performReset.js&#39;);
+
+// We&#39;ll store any already peformed resets in here to check for later
+const _resetCache = {
+  bvnr: null,
+  BVNPlaceHolder: null,
+  fp: null
+}
+
+// This function creates a middleware that performs a reset of a particular type
+// when required
+export function resetIfNeeded(type = &#34;bvnr&#34;) {
+  return function reset(req, res, next) {
+    // Have we performed a reset already for this endpoint family?
+    // If so, used the cached values
+    if (_resetCache[type] != null) {
+      req.apiCredentials = _resetCache[type];
+      next();
+    }
+    // Otherwise perform a reset request and cache that
+    else {
+      performReset(type).then(cred =&gt; {
+        _resetCache[type] = cred;
+        req.apiCredentials = _resetCache[type];
+        next();
+      }).catch(next);
+    }
+  }
 }
 </code></pre>
-</li>
-</ul>
-</li>
-</ul>
+<p>Now we can simply define a route like so, and access <code>req.apiCredentials</code> in the route handler:</p>
+<pre><code>app.get(&#39;/verifyBVN&#39;, resetIfNeeded(&#34;bvnr&#34;), ...);
+</code></pre>
 
 
       </google-codelab-step>
