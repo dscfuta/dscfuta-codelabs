@@ -263,6 +263,54 @@ export function resetIfNeeded(type = &#34;bvnr&#34;) {
 
       </google-codelab-step>
     
+      <google-codelab-step label="Performing a request" duration="10">
+        <h2 is-upgraded>Overview</h2>
+<p>We will be using everything from the previous requests to make a request to the sandbox API in this step. We shall be verifying a single BVN using the /bvnr/VerifySingleBVN endpoint.</p>
+<h2 is-upgraded>Code</h2>
+<pre><code>// Near the top
+const { resetIfNeeded } = require(&#39;./resetIfNeeded&#39;);
+const fetch = require(&#39;node-fetch&#39;);
+const API_URL = process.env.API_URL;
+
+// ...
+
+
+app.post(&#39;/verify/:BVN&#39;, resetIfNeeded(&#34;bvnr&#34;), function (req, res) {
+  const { encryptBody, decryptBody, getRequestHeaders } = req.apiCredentials;
+  const BVN = req.params.BVN;
+  // The API expects a JSON object with a BVN key containing the BVN to verify
+  const body = JSON.stringify({
+    BVN
+  })
+  fetch(`${API_URL}/bvnr/VerifySingleBVN`, {
+    method: &#39;POST&#39;,
+    headers: {
+      ...getRequestHeaders()
+    },
+    body: encryptBody(body)
+  })
+    .then(res =&gt; {
+      // Normally, you&#39;d be calling res.json() here
+      // But the sandbox returns an encrypted response that we need to decrypt
+      // So we use the text() function to get the response as a string of text
+      res.text().then(encryptedRes =&gt; {
+        // Decrypt the response...
+        const resp = decryptBody(encryptedRes);
+        // ...and convert it to JSON
+        const jsonRes = JSON.parse(resp);
+        console.log(jsonRes);
+      })
+    })
+    // Pass on any errors to Express&#39; error handler
+    .catch(next);
+})
+</code></pre>
+<p>You can test this by making a POST request to <code>http://localhost:3000/verify/12345678901</code> with your favourite API testing tool (Postman and Insomnia, for example), and checking your console after. The response should be of this format, if all goes well:</p>
+<pre><code></code></pre>
+
+
+      </google-codelab-step>
+    
   </google-codelab>
 
   <script src="https://storage.googleapis.com/codelab-elements/native-shim.js"></script>

@@ -269,3 +269,57 @@ Now we can simply define a route like so, and access `req.apiCredentials` in the
 ```javascript
 app.get('/verifyBVN', resetIfNeeded("bvnr"), ...);
 ```
+
+## Performing a request
+Duration: 10
+
+### Overview
+
+We will be using everything from the previous requests to make a request to the sandbox API in this step. We shall be verifying a single BVN using the /bvnr/VerifySingleBVN endpoint.
+
+### Code
+
+```javascript
+// Near the top
+const { resetIfNeeded } = require('./resetIfNeeded');
+const fetch = require('node-fetch');
+const API_URL = process.env.API_URL;
+
+// ...
+
+
+app.post('/verify/:BVN', resetIfNeeded("bvnr"), function (req, res) {
+  const { encryptBody, decryptBody, getRequestHeaders } = req.apiCredentials;
+  const BVN = req.params.BVN;
+  // The API expects a JSON object with a BVN key containing the BVN to verify
+  const body = JSON.stringify({
+    BVN
+  })
+  fetch(`${API_URL}/bvnr/VerifySingleBVN`, {
+    method: 'POST',
+    headers: {
+      ...getRequestHeaders()
+    },
+    body: encryptBody(body)
+  })
+    .then(res => {
+      // Normally, you'd be calling res.json() here
+      // But the sandbox returns an encrypted response that we need to decrypt
+      // So we use the text() function to get the response as a string of text
+      res.text().then(encryptedRes => {
+        // Decrypt the response...
+        const resp = decryptBody(encryptedRes);
+        // ...and convert it to JSON
+        const jsonRes = JSON.parse(resp);
+        console.log(jsonRes);
+      })
+    })
+    // Pass on any errors to Express' error handler
+    .catch(next);
+})
+```
+
+You can test this by making a POST request to `http://localhost:3000/verify/12345678901` with your favourite API testing tool (Postman and Insomnia, for example), and checking your console after. The response should be of this format, if all goes well:
+
+```
+```
