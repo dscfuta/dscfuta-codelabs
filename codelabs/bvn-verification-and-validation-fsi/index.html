@@ -306,7 +306,66 @@ app.post(&#39;/verify/:BVN&#39;, resetIfNeeded(&#34;bvnr&#34;), function (req, r
 })
 </code></pre>
 <p>You can test this by making a POST request to <code>http://localhost:3000/verify/12345678901</code> with your favourite API testing tool (Postman and Insomnia, for example), and checking your console after. The response should be of this format, if all goes well:</p>
-<pre><code></code></pre>
+<pre><code>{
+  message: &#39;OK&#39;,
+  data: {
+    ResponseCode: &#39;00&#39;,
+    BVN: &#39;12345678901&#39;,
+    FirstName: &#39;Uchenna&#39;,
+    MiddleName: &#39;Chijioke&#39;,
+    LastName: &#39;Nwanyanwu&#39;,
+    DateOfBirth: &#39;22-Oct-1970&#39;,
+    PhoneNumber: &#39;07033333333&#39;,
+    RegistrationDate: &#39;16-Nov-2014&#39;,
+    EnrollmentBank: &#39;900&#39;,
+    EnrollmentBranch: &#39;Victoria Island&#39;,
+    WatchListed: &#39;NO&#39;
+  }
+}
+</code></pre>
+<p>Note that, as specified earlier, the sandbox contains only sample data, as such, if you try to verify your own BVN for example, you would get a response like this:</p>
+<pre><code>{
+  ResponseCode: &#39;05&#39;,
+  Message: &#39;Unmatched Request, Refer to documentation.&#39;,
+  EXPECT: {
+    header: {
+      Accept: [&#39;application/xml&#39;, &#39;application/json&#39;],
+      &#39;Content-Type&#39;: [&#39;application/xml&#39;, &#39;application/json&#39;],
+      OrganisationCode: &#39;...&#39;,
+      Authorization: &#39;...&#39;,
+      SIGNATURE: &#39;...&#39;,
+      SIGNATURE_METH: &#39;SHA256&#39;
+    },
+    body: { BVN: &#39;12345678901&#39; }
+  }
+}
+</code></pre>
+<p>What this means is essentially that you are only allowed to make a request to verify the sample BVN <code>12345678901</code>.</p>
+<h2 is-upgraded>Response format</h2>
+<p>Let&#39;s look at the format of the response we got from the API in the previous section.</p>
+<pre><code>{
+  message: &#39;OK&#39;,
+  data: {
+    ResponseCode: &#39;00&#39;,
+    BVN: &#39;12345678901&#39;,
+    FirstName: &#39;Uchenna&#39;,
+    MiddleName: &#39;Chijioke&#39;,
+    LastName: &#39;Nwanyanwu&#39;,
+    DateOfBirth: &#39;22-Oct-1970&#39;,
+    PhoneNumber: &#39;07033333333&#39;,
+    RegistrationDate: &#39;16-Nov-2014&#39;,
+    EnrollmentBank: &#39;900&#39;,
+    EnrollmentBranch: &#39;Victoria Island&#39;,
+    WatchListed: &#39;NO&#39;
+  }
+}
+</code></pre>
+<ul>
+<li><code>Message</code>: This is <code>OK</code> for a successful response, or a descriptive error message if an error occured.</li>
+<li><code>ResponseCode</code>: Always <code>00</code> for successful requests, other wise it will be a two-digit error code. The list of error codes can be found on the NIBSS API documentation available for download on the FSI Sandbox.</li>
+<li><code>EXPECT</code>: Sandbox-specific. If the request you sent doesn&#39;t match what the sandbox expects, this field is present and it contains the headers and request body the sandbox API expects you to send.</li>
+<li><code>data</code>: This contains the response data for the request. Excluding <code>ResponseCode</code>, the structure of this object is request specific. Requests that handle multiple BVNs return an array of objects instead of an object. Note that each object will have it&#39;s own <code>ResponseCode</code>.</li>
+</ul>
 
 
       </google-codelab-step>

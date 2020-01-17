@@ -321,5 +321,71 @@ app.post('/verify/:BVN', resetIfNeeded("bvnr"), function (req, res) {
 
 You can test this by making a POST request to `http://localhost:3000/verify/12345678901` with your favourite API testing tool (Postman and Insomnia, for example), and checking your console after. The response should be of this format, if all goes well:
 
+```javascript
+{
+  message: 'OK',
+  data: {
+    ResponseCode: '00',
+    BVN: '12345678901',
+    FirstName: 'Uchenna',
+    MiddleName: 'Chijioke',
+    LastName: 'Nwanyanwu',
+    DateOfBirth: '22-Oct-1970',
+    PhoneNumber: '07033333333',
+    RegistrationDate: '16-Nov-2014',
+    EnrollmentBank: '900',
+    EnrollmentBranch: 'Victoria Island',
+    WatchListed: 'NO'
+  }
+}
 ```
+
+Note that, as specified earlier, the sandbox contains only sample data, as such, if you try to verify your own BVN for example, you would get a response like this:
+
+```javascript
+{
+  ResponseCode: '05',
+  Message: 'Unmatched Request, Refer to documentation.',
+  EXPECT: {
+    header: {
+      Accept: ['application/xml', 'application/json'],
+      'Content-Type': ['application/xml', 'application/json'],
+      OrganisationCode: '...',
+      Authorization: '...',
+      SIGNATURE: '...',
+      SIGNATURE_METH: 'SHA256'
+    },
+    body: { BVN: '12345678901' }
+  }
+}
 ```
+
+What this means is essentially that you are only allowed to make a request to verify the sample BVN `12345678901`.
+
+### Response format
+
+Let's look at the format of the response we got from the API in the previous section.
+
+```javascript
+{
+  message: 'OK',
+  data: {
+    ResponseCode: '00',
+    BVN: '12345678901',
+    FirstName: 'Uchenna',
+    MiddleName: 'Chijioke',
+    LastName: 'Nwanyanwu',
+    DateOfBirth: '22-Oct-1970',
+    PhoneNumber: '07033333333',
+    RegistrationDate: '16-Nov-2014',
+    EnrollmentBank: '900',
+    EnrollmentBranch: 'Victoria Island',
+    WatchListed: 'NO'
+  }
+}
+```
+
+- `Message`: This is `OK` for a successful response, or a descriptive error message if an error occured.
+- `ResponseCode`: Always `00` for successful requests, other wise it will be a two-digit error code. The list of error codes can be found on the NIBSS API documentation available for download on the FSI Sandbox.
+- `EXPECT`: Sandbox-specific. If the request you sent doesn't match what the sandbox expects, this field is present and it contains the headers and request body the sandbox API expects you to send.
+- `data`: This contains the response data for the request. Excluding `ResponseCode`, the structure of this object is request specific. Requests that handle multiple BVNs return an array of objects instead of an object. Note that each object will have it's own `ResponseCode`.
