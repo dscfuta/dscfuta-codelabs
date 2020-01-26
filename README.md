@@ -188,7 +188,7 @@ Second, login to the firebase CLI:
 firebase login
 ```
 
-Then either generate a new firebase configuration by running `firebase init hosting` inside this folder or copy the sample files provided and modify them to fit.
+Then either generate a new firebase configuration by running `firebase init hosting` inside this folder (make sure to set the `dist` folder as the folder to be uploaded) or copy the sample files provided and modify them to fit.
 
 You may then deploy by running:
 
