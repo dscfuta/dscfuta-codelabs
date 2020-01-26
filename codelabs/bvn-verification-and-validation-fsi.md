@@ -71,6 +71,9 @@ Positive
 
 Then run `npx nodemon`, which will start our program and automatically restart it when we make any changes.
 
+Positive
+: **N/B**: `npx` is a command that comes with `npm` that allows us to run binaries in the `node_modules` folder without adding `./node_modules/.bin` to our path. The equivalent yarn command would simply be `yarn run nodemon`. `npx` also allows you to run a binary from a non-installed package. You can read more [here](https://medium.com/@maybekatz/introducing-npx-an-npm-package-runner-55f7d4bd282b).
+
 ## How to communicate with the sandbox API
 
 Duration: 10

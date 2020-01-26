@@ -70,6 +70,8 @@ SANDBOX_KEY=[your FSI Sandbox key which can be found on your profile]
 <aside class="special"><p><strong>N/B</strong>: As a good rule of thumb, make sure to add this file to your .gitignore. Environment variables should <em>never</em> be checked in to a Git repo.</p>
 </aside>
 <p>Then run <code>npx nodemon</code>, which will start our program and automatically restart it when we make any changes.</p>
+<aside class="special"><p><strong>N/B</strong>: <code>npx</code> is a command that comes with <code>npm</code> that allows us to run binaries in the <code>node_modules</code> folder without adding <code>./node_modules/.bin</code> to our path. The equivalent yarn command would simply be <code>yarn run nodemon</code>. <code>npx</code> also allows you to run a binary from a non-installed package. You can read more <a href="https://medium.com/@maybekatz/introducing-npx-an-npm-package-runner-55f7d4bd282b" target="_blank">here</a>.</p>
+</aside>
 
 
       </google-codelab-step>
