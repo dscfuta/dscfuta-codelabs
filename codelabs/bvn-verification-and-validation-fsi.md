@@ -392,3 +392,16 @@ Let's look at the format of the response we got from the API in the previous sec
 - `ResponseCode`: Always `00` for successful requests, other wise it will be a two-digit error code. The list of error codes can be found on the NIBSS API documentation available for download on the FSI Sandbox.
 - `EXPECT`: Sandbox-specific. If the request you sent doesn't match what the sandbox expects, this field is present and it contains the headers and request body the sandbox API expects you to send.
 - `data`: This contains the response data for the request. Excluding `ResponseCode`, the structure of this object is request specific. Requests that handle multiple BVNs return an array of objects instead of an object. Note that each object will have it's own `ResponseCode`.
+
+You can then consume the data from the API and use them however you want in your application. You may not even expose the endpoint and just have it as a function in your backend code that's called as part of some other process in your app. The posibilites are limitless (but remember, the sandbox works only with sample data).
+
+## Conclusion
+Duration: 1
+
+The process is similar for the other endpoints, as outline below:
+- Make a request to `/Reset` at one point in the lifecycle of the app, before making any further requests, for each group of endpoints
+  We handle this by making the request when needed and injecting the response into to the `Request` object using a middleware
+- Perform requests to the API, making sure to encrypt and decrypt the response using the data from the `/Reset` response.
+  Functions to do this are also injected into the `Request` object by our middleware.
+
+And that's it. Have fun building your apps! :)

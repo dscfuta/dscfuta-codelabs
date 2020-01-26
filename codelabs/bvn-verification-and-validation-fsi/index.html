@@ -368,6 +368,18 @@ app.post(&#39;/verify/:BVN&#39;, resetIfNeeded(&#34;bvnr&#34;), function (req, r
 <li><code>EXPECT</code>: Sandbox-specific. If the request you sent doesn&#39;t match what the sandbox expects, this field is present and it contains the headers and request body the sandbox API expects you to send.</li>
 <li><code>data</code>: This contains the response data for the request. Excluding <code>ResponseCode</code>, the structure of this object is request specific. Requests that handle multiple BVNs return an array of objects instead of an object. Note that each object will have it&#39;s own <code>ResponseCode</code>.</li>
 </ul>
+<p>You can then consume the data from the API and use them however you want in your application. You may not even expose the endpoint and just have it as a function in your backend code that&#39;s called as part of some other process in your app. The posibilites are limitless (but remember, the sandbox works only with sample data).</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Conclusion" duration="1">
+        <p>The process is similar for the other endpoints, as outline below:</p>
+<ul>
+<li>Make a request to <code>/Reset</code> at one point in the lifecycle of the app, before making any further requests, for each group of endpoints We handle this by making the request when needed and injecting the response into to the <code>Request</code> object using a middleware</li>
+<li>Perform requests to the API, making sure to encrypt and decrypt the response using the data from the <code>/Reset</code> response. Functions to do this are also injected into the <code>Request</code> object by our middleware.</li>
+</ul>
+<p>And that&#39;s it. Have fun building your apps! :)</p>
 
 
       </google-codelab-step>
